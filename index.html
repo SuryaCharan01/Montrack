@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Montrack — Offline Expense Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif'>₹</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="top-bar">
+      <div>
+        <h1 class="app-title">Montrack</h1>
+        <span class="offline-badge" id="offline-status">Offline Ready</span>
+      </div>
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </header>
+
+    <!-- Main Views -->
+    <main class="main-content">
+      
+      <!-- VIEW 1: HOME -->
+      <section id="view-home" class="view active">
+        <!-- Quick Summary Cards -->
+        <div class="stats-grid">
+          <div class="stat-card primary-card">
+            <span class="stat-label">Today</span>
+            <h2 class="stat-value" id="stat-today">₹0</h2>
+            <span class="stat-sub" id="stat-today-count">0 transactions</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">This Week</span>
+            <h2 class="stat-value" id="stat-week">₹0</h2>
+            <span class="stat-sub" id="stat-avg-daily">Avg ₹0/day</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">This Month</span>
+            <h2 class="stat-value" id="stat-month">₹0</h2>
+            <span class="stat-sub" id="stat-month-count">0 txns</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Top Category</span>
+            <h2 class="stat-value truncate" id="stat-top-cat">—</h2>
+            <span class="stat-sub" id="stat-top-cat-amt">₹0</span>
+          </div>
+        </div>
+
+        <!-- One-Tap Smart Combos -->
+        <div class="section-block" id="smart-combos-section" style="display:none;">
+          <div class="section-header">
+            <h3>⚡ Quick Tap (Smart Memory)</h3>
+            <span class="hint-text">Tap to log instantly</span>
+          </div>
+          <div class="chips-scroll" id="smart-combos-list"></div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="section-block">
+          <div class="section-header">
+            <h3>Recent Activity</h3>
+            <button class="text-btn" onclick="switchView('history')">See All →</button>
+          </div>
+          <div id="recent-list" class="txn-list"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: HISTORY -->
+      <section id="view-history" class="view">
+        <div class="filter-panel card">
+          <input type="search" id="filter-search" placeholder="Search description, place, category..." class="input-field" />
+          <div class="filter-row">
+            <select id="filter-category" class="input-field">
+              <option value="">All Categories</option>
+            </select>
+            <input type="date" id="filter-date-from" class="input-field" title="From Date" />
+            <input type="date" id="filter-date-to" class="input-field" title="To Date" />
+          </div>
+          <div class="filter-actions">
+            <span id="filter-summary" class="hint-text">Showing all transactions</span>
+            <button class="text-btn" id="clear-filters">Reset</button>
+          </div>
+        </div>
+        <div id="history-list" class="txn-list"></div>
+      </section>
+
+      <!-- VIEW 3: ANALYTICS & REPORTS -->
+      <section id="view-analytics" class="view">
+        <!-- Automated Report Card -->
+        <div class="card report-card">
+          <div class="report-header">
+            <h3>📊 Automated Report</h3>
+            <div class="segmented-control">
+              <button class="seg-btn active" data-period="week">Weekly</button>
+              <button class="seg-btn" data-period="month">Monthly</button>
+            </div>
+          </div>
+          <div id="automated-report-content" class="report-body"></div>
+        </div>
+
+        <!-- Charts -->
+        <div class="card chart-card">
+          <h3>Category Breakdown</h3>
+          <div class="canvas-wrapper">
+            <canvas id="chart-category" width="320" height="220"></canvas>
+          </div>
+          <div id="legend-category" class="chart-legend"></div>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Daily Spending (Last 7 Days)</h3>
+          <div class="canvas-wrapper">
+            <canvas id="chart-daily" width="320" height="200"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Monthly Trend (Last 6 Months)</h3>
+          <div class="canvas-wrapper">
+            <canvas id="chart-monthly" width="320" height="200"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Top Spending Locations</h3>
+          <div class="canvas-wrapper">
+            <canvas id="chart-locations" width="320" height="200"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: SETTINGS -->
+      <section id="view-settings" class="view">
+        <div class="card settings-group">
+          <h3>Custom Categories</h3>
+          <p class="hint-text">Add new categories with custom emojis.</p>
+          <div class="inline-form">
+            <input type="text" id="new-cat-icon" placeholder="🍔" maxlength="2" class="input-field emoji-input" />
+            <input type="text" id="new-cat-name" placeholder="Category name" class="input-field" />
+            <button class="btn-primary" id="add-cat-btn">Add</button>
+          </div>
+          <div id="custom-categories-list" class="tags-wrap"></div>
+        </div>
+
+        <div class="card settings-group">
+          <h3>Data Management (100% Local)</h3>
+          <p class="hint-text">All data stays on your device in IndexedDB. Export regularly for safekeeping.</p>
+          <div class="settings-buttons">
+            <button class="btn-secondary" id="export-csv-btn">📄 Export CSV / Excel</button>
+            <button class="btn-secondary" id="backup-json-btn">💾 Backup Data (JSON)</button>
+            <label class="btn-secondary file-label">
+              📥 Restore Backup (JSON)
+              <input type="file" id="restore-json-input" accept=".json" hidden />
+            </label>
+            <button class="btn-danger" id="reset-data-btn">🗑️ Wipe All Data</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Floating Action Button -->
+    <button class="fab" id="open-entry-modal" aria-label="Add Expense">+</button>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-target="home">
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-target="history">
+        <span class="nav-icon">🧾</span>
+        <span>History</span>
+      </button>
+      <div class="nav-spacer"></div>
+      <button class="nav-item" data-target="analytics">
+        <span class="nav-icon">📈</span>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" data-target="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ADD / EDIT EXPENSE MODAL -->
+  <div class="modal-backdrop" id="entry-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Expense</h2>
+        <button class="icon-btn" id="close-entry-modal">✕</button>
+      </div>
+
+      <form id="expense-form" autocomplete="off">
+        <input type="hidden" id="entry-id" />
+
+        <!-- Amount Input -->
+        <div class="amount-box">
+          <span class="currency-symbol">₹</span>
+          <input type="number" id="entry-amount" step="0.01" min="0.01" placeholder="0" required inputmode="decimal" />
+        </div>
+        <div id="suggest-amounts" class="suggestion-row"></div>
+
+        <!-- Place Input with Smart Autocomplete -->
+        <div class="form-group">
+          <label for="entry-place">Place / Merchant</label>
+          <input type="text" id="entry-place" placeholder="e.g., Campus Canteen, Metro, Amazon" required class="input-field" />
+          <div id="suggest-places" class="suggestion-row"></div>
+        </div>
+
+        <!-- Category Selector -->
+        <div class="form-group">
+          <label for="entry-category">Category</label>
+          <select id="entry-category" required class="input-field"></select>
+          <div id="suggest-categories" class="suggestion-row"></div>
+        </div>
+
+        <!-- Description Input with Smart Autocomplete -->
+        <div class="form-group">
+          <label for="entry-desc">Description</label>
+          <input type="text" id="entry-desc" placeholder="What was this for?" class="input-field" />
+          <div id="suggest-descs" class="suggestion-row"></div>
+        </div>
+
+        <!-- Date & Payment Method -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="entry-date">Date</label>
+            <input type="date" id="entry-date" required class="input-field" />
+          </div>
+          <div class="form-group">
+            <label for="entry-payment">Payment</label>
+            <select id="entry-payment" class="input-field">
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Card">Debit/Credit Card</option>
+              <option value="NetBanking">NetBanking</option>
+              <option value="Wallet">Wallet</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary btn-block" id="save-expense-btn">Save Expense</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
