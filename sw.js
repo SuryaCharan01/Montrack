@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rupeeledger-v1';
+const CACHE_NAME = 'Montrack-v1';
 const ASSETS = [
   './',
   './index.html',
