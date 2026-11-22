@@ -1,261 +1,710 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Montrack — Offline Expense Tracker</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif'>₹</text></svg>" />
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="app-shell">
-    <!-- Top Header -->
-    <header class="top-bar">
-      <div>
-        <h1 class="app-title">Montrack</h1>
-        <span class="offline-badge" id="offline-status">Offline Ready</span>
-      </div>
-      <button class="icon-btn" id="theme-toggle" aria-label="Toggle Theme" title="Toggle Light/Dark Mode">
-        <span id="theme-icon">🌙</span>
-      </button>
-    </header>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-alt: #f1f5f9;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+  --primary-soft: #dbeafe;
+  --danger: #ef4444;
+  --border: #e2e8f0;
+  --shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --radius: 16px;
+}
 
-    <!-- Main Views -->
-    <main class="main-content">
-      
-      <!-- VIEW 1: HOME -->
-      <section id="view-home" class="view active">
-        <!-- Quick Summary Cards -->
-        <div class="stats-grid">
-          <div class="stat-card primary-card">
-            <span class="stat-label">Today</span>
-            <h2 class="stat-value" id="stat-today">₹0</h2>
-            <span class="stat-sub" id="stat-today-count">0 transactions</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">This Week</span>
-            <h2 class="stat-value" id="stat-week">₹0</h2>
-            <span class="stat-sub" id="stat-avg-daily">Avg ₹0/day</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">This Month</span>
-            <h2 class="stat-value" id="stat-month">₹0</h2>
-            <span class="stat-sub" id="stat-month-count">0 txns</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Top Category</span>
-            <h2 class="stat-value truncate" id="stat-top-cat">—</h2>
-            <span class="stat-sub" id="stat-top-cat-amt">₹0</span>
-          </div>
-        </div>
+[data-theme="dark"] {
+  --bg: #0b1120;
+  --surface: #1e293b;
+  --surface-alt: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --primary: #3b82f6;
+  --primary-soft: #1e3a8a;
+  --danger: #f87171;
+  --border: #334155;
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
 
-        <!-- One-Tap Smart Combos -->
-        <div class="section-block" id="smart-combos-section" style="display:none;">
-          <div class="section-header">
-            <h3>⚡ Quick Tap (Smart Memory)</h3>
-            <span class="hint-text">Tap to log instantly</span>
-          </div>
-          <div class="chips-scroll" id="smart-combos-list"></div>
-        </div>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
 
-        <!-- Recent Transactions -->
-        <div class="section-block">
-          <div class="section-header">
-            <h3>Recent Activity</h3>
-            <button class="text-btn" onclick="switchView('history')">See All →</button>
-          </div>
-          <div id="recent-list" class="txn-list"></div>
-        </div>
-      </section>
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.2s, color 0.2s;
+}
 
-      <!-- VIEW 2: HISTORY -->
-      <section id="view-history" class="view">
-        <div class="filter-panel card">
-          <input type="search" id="filter-search" placeholder="Search description, place, category..." class="input-field" />
-          <div class="filter-row">
-            <select id="filter-category" class="input-field">
-              <option value="">All Categories</option>
-            </select>
-            <input type="date" id="filter-date-from" class="input-field" title="From Date" />
-            <input type="date" id="filter-date-to" class="input-field" title="To Date" />
-          </div>
-          <div class="filter-actions">
-            <span id="filter-summary" class="hint-text">Showing all transactions</span>
-            <button class="text-btn" id="clear-filters">Reset</button>
-          </div>
-        </div>
-        <div id="history-list" class="txn-list"></div>
-      </section>
+.app-shell {
+  max-width: 540px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 84px;
+}
 
-      <!-- VIEW 3: ANALYTICS & REPORTS -->
-      <section id="view-analytics" class="view">
-        <!-- Automated Report Card -->
-        <div class="card report-card">
-          <div class="report-header">
-            <h3>📊 Automated Report</h3>
-            <div class="segmented-control">
-              <button class="seg-btn active" data-period="week">Weekly</button>
-              <button class="seg-btn" data-period="month">Monthly</button>
-            </div>
-          </div>
-          <div id="automated-report-content" class="report-body"></div>
-        </div>
+/* Header */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
 
-        <!-- Charts -->
-        <div class="card chart-card">
-          <h3>Category Breakdown</h3>
-          <div class="canvas-wrapper">
-            <canvas id="chart-category" width="320" height="220"></canvas>
-          </div>
-          <div id="legend-category" class="chart-legend"></div>
-        </div>
+.app-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
 
-        <div class="card chart-card">
-          <h3>Daily Spending (Last 7 Days)</h3>
-          <div class="canvas-wrapper">
-            <canvas id="chart-daily" width="320" height="200"></canvas>
-          </div>
-        </div>
+.offline-badge {
+  font-size: 0.72rem;
+  color: #10b981;
+  font-weight: 600;
+}
 
-        <div class="card chart-card">
-          <h3>Monthly Trend (Last 6 Months)</h3>
-          <div class="canvas-wrapper">
-            <canvas id="chart-monthly" width="320" height="200"></canvas>
-          </div>
-        </div>
+.icon-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
 
-        <div class="card chart-card">
-          <h3>Top Spending Locations</h3>
-          <div class="canvas-wrapper">
-            <canvas id="chart-locations" width="320" height="200"></canvas>
-          </div>
-        </div>
-      </section>
+/* Views */
+.main-content {
+  padding: 0 16px;
+  flex: 1;
+}
 
-      <!-- VIEW 4: SETTINGS -->
-      <section id="view-settings" class="view">
-        <div class="card settings-group">
-          <h3>Custom Categories</h3>
-          <p class="hint-text">Add new categories with custom emojis.</p>
-          <div class="inline-form">
-            <input type="text" id="new-cat-icon" placeholder="🍔" maxlength="2" class="input-field emoji-input" />
-            <input type="text" id="new-cat-name" placeholder="Category name" class="input-field" />
-            <button class="btn-primary" id="add-cat-btn">Add</button>
-          </div>
-          <div id="custom-categories-list" class="tags-wrap"></div>
-        </div>
+.view {
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
 
-        <div class="card settings-group">
-          <h3>Data Management (100% Local)</h3>
-          <p class="hint-text">All data stays on your device in IndexedDB. Export regularly for safekeeping.</p>
-          <div class="settings-buttons">
-            <button class="btn-secondary" id="export-csv-btn">📄 Export CSV / Excel</button>
-            <button class="btn-secondary" id="backup-json-btn">💾 Backup Data (JSON)</button>
-            <label class="btn-secondary file-label">
-              📥 Restore Backup (JSON)
-              <input type="file" id="restore-json-input" accept=".json" hidden />
-            </label>
-            <button class="btn-danger" id="reset-data-btn">🗑️ Wipe All Data</button>
-          </div>
-        </div>
-      </section>
+.view.active {
+  display: block;
+}
 
-    </main>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-    <!-- Floating Action Button -->
-    <button class="fab" id="open-entry-modal" aria-label="Add Expense">+</button>
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-target="home">
-        <span class="nav-icon">🏠</span>
-        <span>Home</span>
-      </button>
-      <button class="nav-item" data-target="history">
-        <span class="nav-icon">🧾</span>
-        <span>History</span>
-      </button>
-      <div class="nav-spacer"></div>
-      <button class="nav-item" data-target="analytics">
-        <span class="nav-icon">📈</span>
-        <span>Analytics</span>
-      </button>
-      <button class="nav-item" data-target="settings">
-        <span class="nav-icon">⚙️</span>
-        <span>Settings</span>
-      </button>
-    </nav>
-  </div>
+.stat-card {
+  background: var(--surface);
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
 
-  <!-- ADD / EDIT EXPENSE MODAL -->
-  <div class="modal-backdrop" id="entry-modal">
-    <div class="modal-sheet">
-      <div class="modal-header">
-        <h2 id="modal-title">Add Expense</h2>
-        <button class="icon-btn" id="close-entry-modal">✕</button>
-      </div>
+.primary-card {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+}
 
-      <form id="expense-form" autocomplete="off">
-        <input type="hidden" id="entry-id" />
+.primary-card .stat-label,
+.primary-card .stat-sub {
+  color: rgba(255, 255, 255, 0.85);
+}
 
-        <!-- Amount Input -->
-        <div class="amount-box">
-          <span class="currency-symbol">₹</span>
-          <input type="number" id="entry-amount" step="0.01" min="0.01" placeholder="0" required inputmode="decimal" />
-        </div>
-        <div id="suggest-amounts" class="suggestion-row"></div>
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
 
-        <!-- Place Input with Smart Autocomplete -->
-        <div class="form-group">
-          <label for="entry-place">Place / Merchant</label>
-          <input type="text" id="entry-place" placeholder="e.g., Campus Canteen, Metro, Amazon" required class="input-field" />
-          <div id="suggest-places" class="suggestion-row"></div>
-        </div>
+.stat-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 6px 0 4px;
+}
 
-        <!-- Category Selector -->
-        <div class="form-group">
-          <label for="entry-category">Category</label>
-          <select id="entry-category" required class="input-field"></select>
-          <div id="suggest-categories" class="suggestion-row"></div>
-        </div>
+.stat-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
 
-        <!-- Description Input with Smart Autocomplete -->
-        <div class="form-group">
-          <label for="entry-desc">Description</label>
-          <input type="text" id="entry-desc" placeholder="What was this for?" class="input-field" />
-          <div id="suggest-descs" class="suggestion-row"></div>
-        </div>
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-        <!-- Date & Payment Method -->
-        <div class="form-row">
-          <div class="form-group">
-            <label for="entry-date">Date</label>
-            <input type="date" id="entry-date" required class="input-field" />
-          </div>
-          <div class="form-group">
-            <label for="entry-payment">Payment</label>
-            <select id="entry-payment" class="input-field">
-              <option value="UPI">UPI</option>
-              <option value="Cash">Cash</option>
-              <option value="Card">Debit/Credit Card</option>
-              <option value="NetBanking">NetBanking</option>
-              <option value="Wallet">Wallet</option>
-            </select>
-          </div>
-        </div>
+/* Sections & Cards */
+.section-block {
+  margin-bottom: 22px;
+}
 
-        <button type="submit" class="btn-primary btn-block" id="save-expense-btn">Save Expense</button>
-      </form>
-    </div>
-  </div>
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
 
-  <!-- Toast Notification -->
-  <div id="toast" class="toast"></div>
+.section-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+.hint-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+/* Smart Combos Horizontal Scroll */
+.chips-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+
+.chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.combo-chip {
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 135px;
+  text-align: left;
+  transition: transform 0.1s;
+}
+
+.combo-chip:active {
+  transform: scale(0.97);
+}
+
+.combo-top {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.combo-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Transaction List */
+.txn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.txn-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.txn-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.txn-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.txn-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.txn-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.txn-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.txn-amount {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.txn-actions {
+  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.mini-btn {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mini-btn.del:hover {
+  color: var(--danger);
+}
+
+/* Filters */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 8px;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Inputs & Buttons */
+.input-field {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-secondary {
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: center;
+  display: block;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Analytics & Reports */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.segmented-control {
+  display: flex;
+  background: var(--surface-alt);
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.seg-btn {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seg-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.report-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.report-metric {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.insight-box {
+  background: var(--primary-soft);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.chart-card h3 {
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.canvas-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Settings */
+.settings-group h3 {
+  margin-bottom: 4px;
+}
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.emoji-input {
+  width: 54px;
+  text-align: center;
+}
+
+.tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat-tag {
+  background: var(--surface-alt);
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Bottom Nav & FAB */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 540px;
+  height: 68px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 20;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 64px;
+}
+
+.nav-item.active {
+  color: var(--primary);
+}
+
+.nav-icon {
+  font-size: 1.25rem;
+}
+
+.nav-spacer {
+  width: 56px;
+}
+
+.fab {
+  position: fixed;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: 4px solid var(--bg);
+  font-size: 2rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+  z-index: 30;
+}
+
+/* Modal Sheet */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-sheet {
+  background: var(--surface);
+  width: 100%;
+  max-width: 540px;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: slideUp 0.22s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.amount-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.currency-symbol {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-right: 6px;
+}
+
+.amount-box input {
+  background: none;
+  border: none;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text);
+  width: 160px;
+  outline: none;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.suggestion-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.sug-pill {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: none;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .sug-pill {
+  color: #93c5fd;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: #0f172a;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: transform 0.25s ease;
+  z-index: 100;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+}
